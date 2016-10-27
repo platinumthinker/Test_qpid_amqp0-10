@@ -2,12 +2,9 @@
 
 import logging
 import sys
-# from qpid.messaging import *
 import qpid.client
-#, qmf.console
 import Queue
 from qpid.content import Content
-# from qpid.message import Message
 from qpid.harness import Skipped
 from qpid.exceptions import VersionError
 from qpid.spec08 import load
@@ -39,9 +36,18 @@ session.message_subscribe(queue="test-queue", destination="consumer_tag",
 session.message_flow(destination="consumer_tag", unit=session.credit_unit.message, value=0xFFFFFFFFL)
 session.message_flow(destination="consumer_tag", unit=session.credit_unit.byte, value=0xFFFFFFFFL)
 queue = session.incoming("consumer_tag")
-delivery_properties = session.delivery_properties(routing_key="key")
-sent = Message(delivery_properties, "Hello World!")
-session.message_transfer(destination="test", message=sent)
 
+dp = session.delivery_properties(routing_key="key",
+    delivery_mode=session.delivery_mode.non_persistent,
+    priority=session.delivery_priority.medium)
+sent = Message(dp, "Hello World!")
+
+time.sleep(5)
+session.message_transfer(destination="test", message=sent,
+    accept_mode=session.accept_mode.none,
+    acquire_mode=session.acquire_mode.pre_acquired)
+
+msg = queue.get(timeout=10)
+print(sent.body == msg.body, sent.body, msg.body)
+conn.close()
 input()
-# conn.close()
